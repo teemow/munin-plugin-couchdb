@@ -1,0 +1,59 @@
+#!/usr/bin/env node
+// Munin plugin for CouchDB database disk sizes
+
+var http = require("http")
+  , sys = require("sys")
+
+var client = http.createClient(5984, "localhost")
+var req = client.request('GET', '/_all_dbs')
+
+req.on('response', function(res) {
+    if (process.argv[2] !== undefined && process.argv[2] == 'autoconf') {
+        if (res.statusCode === 200) {
+            sys.puts("yes")
+        } else {
+            sys.puts("no")
+            process.exit(1)
+        }
+    } else {
+        var body = ''
+        res.on('data', function(chunk) {
+            body += chunk
+        })
+        res.on('end', function() {
+            var dbs = JSON.parse(body)
+
+            if (process.argv[2] !== undefined && process.argv[2] == 'config') {
+                sys.puts("graph_title CouchDB db doc count");
+                sys.puts("graph_args --base 1000");
+                sys.puts("graph_vlabel Documents");
+                sys.puts("graph_category couchdb");
+            }
+
+            dbs.forEach(function(db) {
+                if (process.argv[2] !== undefined && process.argv[2] == 'config') {
+                    sys.puts(db + "_doc_count.label " + db);
+                    sys.puts(db + "_doc_count.type COUNTER");
+                    sys.puts(db + "_doc_count.min 0");
+                    sys.puts(db + "_doc_count.max 100000000");
+                } else {
+                    var db_req = client.request('GET', '/' + db)
+                    db_req.on('response', function(res) {
+                        var body = ''
+                        res.on('data', function(chunk) {
+                            body += chunk
+                        })
+                        res.on('end', function() {
+                            var stat = JSON.parse(body)
+                            sys.puts(db + "_doc_count.value " + stat.doc_count)
+                        })
+                    })
+                    db_req.end()
+                }
+            })
+        })
+    }
+})
+
+req.end()
+
