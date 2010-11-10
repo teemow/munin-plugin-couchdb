@@ -29,7 +29,7 @@ CouchDB servers with statistics enabled.
 =item *
 
 B<uri>: Set the URI for access to the _stats endpoint for the target CouchDB
-instance. This defaults to B<http://localhost:5984/_stats>.
+instance. This defaults to B<http://localhost:5984/_stats?range=300>.
 
 =back
 
@@ -61,7 +61,7 @@ if (!eval("require JSON;")) {
 	$ret = "JSON not found";
 }
 
-my $URI = exists($ENV{'uri'}) ? $ENV{'uri'} : "http://localhost:5984/_stats";
+my $URI = exists($ENV{'uri'}) ? $ENV{'uri'} : "http://localhost:5984/_stats?range=300";
 
 if (defined($ARGV[0]) && $ARGV[0] eq "autoconf")
 {
@@ -91,6 +91,14 @@ if (defined($ARGV[0]) && $ARGV[0] eq "config") {
 	print "requests.type COUNTER\n";
 	print "requests.min 0\n";
 	print "requests.max 1000000\n";
+	print "bulk_requests.label bulk requests\n";
+	print "bulk_requests.type COUNTER\n";
+	print "bulk_requests.min 0\n";
+	print "bulk_requests.max 1000000\n";
+	print "view_reads.label view reads\n";
+	print "view_reads.type COUNTER\n";
+	print "view_reads.min 0\n";
+	print "view_reads.max 1000000\n";
 	exit 0;
 }
 
@@ -98,7 +106,12 @@ my $response = LWP::UserAgent->new(timeout => 5)->request(HTTP::Request->new('GE
 
 if ($response->is_success) {
 	my $json = JSON::decode_json($response->content);
-	print "requests.value $json->{'httpd'}->{'requests'}->{'current'}\n";
+	print "requests.value $json->{'httpd'}->{'requests'}->{'mean'}\n";
+	print "bulk_requests.value $json->{'httpd'}->{'bulk_requests'}->{'mean'}\n";
+	print "view_reads.value $json->{'httpd'}->{'view_reads'}->{'mean'}\n";
 } else {
 	print "requests.value U\n";
+	print "bulk_requests.value U\n";
+	print "view_reads.value U\n";
 }
+

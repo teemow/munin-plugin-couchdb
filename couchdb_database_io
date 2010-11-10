@@ -28,7 +28,7 @@ CouchDB servers with statistics enabled.
 =item *
 
 B<uri>: Set the URI for access to the _stats endpoint for the target CouchDB
-instance. This defaults to B<http://localhost:5984/_stats>.
+instance. This defaults to B<http://localhost:5984/_stats?range=300>.
 
 =back
 
@@ -60,7 +60,7 @@ if (!eval("require JSON;")) {
 	$ret = "JSON not found";
 }
 
-my $URI = exists($ENV{'uri'}) ? $ENV{'uri'} : "http://localhost:5984/_stats";
+my $URI = exists($ENV{'uri'}) ? $ENV{'uri'} : "http://localhost:5984/_stats?range=300";
 
 if (defined($ARGV[0]) && $ARGV[0] eq "autoconf")
 {
@@ -103,9 +103,10 @@ my $response = LWP::UserAgent->new(timeout => 5)->request(HTTP::Request->new('GE
 
 if ($response->is_success) {
 	my $json = JSON::decode_json($response->content);
-	print "reads.value $json->{'couchdb'}->{'database_reads'}->{'current'}\n";
-	print "writes.value $json->{'couchdb'}->{'database_writes'}->{'current'}\n";
+	print "reads.value $json->{'couchdb'}->{'database_reads'}->{'mean'}\n";
+	print "writes.value $json->{'couchdb'}->{'database_writes'}->{'mean'}\n";
 } else {
 	print "reads.value U\n";
 	print "writes.value U\n";
 }
+

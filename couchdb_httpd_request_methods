@@ -29,7 +29,7 @@ CouchDB servers with statistics enabled.
 =item *
 
 B<uri>: Set the URI for access to the _stats endpoint for the target CouchDB
-instance. This defaults to B<http://localhost:5984/_stats>.
+instance. This defaults to B<http://localhost:5984/_stats?range=300>.
 
 =back
 
@@ -62,7 +62,7 @@ if (!eval("require JSON;")) {
 	$ret = "JSON not found";
 }
 
-my $URI = exists($ENV{'uri'}) ? $ENV{'uri'} : "http://localhost:5984/_stats";
+my $URI = exists($ENV{'uri'}) ? $ENV{'uri'} : "http://localhost:5984/_stats?range=300";
 my @HTTP_VERBS = ('get', 'put', 'post', 'delete', 'copy', 'head', 'move');
 
 if (@HTTP_VERBS < 1) {
@@ -116,7 +116,7 @@ if ($response->is_success) {
 	foreach (@HTTP_VERBS) {
 		if (defined($json->{'httpd_request_methods'}->{uc($_)})) {
 			$ucmethod = uc($_);
-			print "$_.value $json->{'httpd_request_methods'}->{$ucmethod}->{'current'}\n";
+			print "$_.value $json->{'httpd_request_methods'}->{$ucmethod}->{'mean'}\n";
 		} else {
 			print "$_.value U\n";
 		}
@@ -126,3 +126,4 @@ if ($response->is_success) {
 		print "$_.value U\n";
 	}
 }
+
