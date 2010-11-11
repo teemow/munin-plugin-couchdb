@@ -1,53 +1,59 @@
 #!/usr/bin/env node
-// Munin plugin for CouchDB database disk sizes
+// Munin plugin for CouchDB database doc count
 
 // Magic Markers for auto-configuration
 // #%# family=auto
 // #%# capabilities=autoconf suggest
 
-var cradle = require("cradle")
-  , sys = require("sys")
+var sys = require("sys")
+  , fs = require("fs")
+  , path = require("path")
 
-var conn = new(cradle.Connection)
-  , mode = "fetch"
+fs.realpath(__filename, function(err, realpath) {
+  require.paths.unshift(path.dirname(realpath) + "/vendor")
 
-// could be "config" or "autoconf" mode
-if (process.argv[2] !== undefined) mode = process.argv[2]
+  var cradle = require("cradle")
+    , conn = new(cradle.Connection)
+    , mode = "fetch"
 
-conn.databases(function(err, dbs) {
-  if (mode === 'autoconf') {
-    if (!err) {
-      sys.puts("yes")
-    } else {
-      sys.puts("no")
-      process.exit(1)
-    }
-  } else {
-    if (err) throw err
+  // could be "config" or "autoconf" mode
+  if (process.argv[2] !== undefined) mode = process.argv[2]
 
-    if (mode === 'config') {
-      sys.puts("graph_title CouchDB db doc count");
-      sys.puts("graph_args --base 1000");
-      sys.puts("graph_vlabel Documents");
-      sys.puts("graph_category couchdb");
-    }
-
-    dbs.forEach(function(db) {
-      if (mode === 'config') {
-        sys.puts(db + "_doc_count.label " + db);
-        sys.puts(db + "_doc_count.type COUNTER");
-        sys.puts(db + "_doc_count.min 0");
-        sys.puts(db + "_doc_count.max 100000000");
+  conn.databases(function(err, dbs) {
+    if (mode === 'autoconf') {
+      if (!err) {
+        sys.puts("yes")
       } else {
-        conn.database(db).info(function (err, info) {
-          if (err) {
-            sys.puts(db + "_doc_count.value U")
-          } else {
-            sys.puts(db + "_doc_count.value " + (info.doc_count || 0))
-          }
-        })
+        sys.puts("no")
+        process.exit(1)
       }
-    })
-  }
-});
+    } else {
+      if (err) throw err
+
+      if (mode === 'config') {
+        sys.puts("graph_title CouchDB db doc count")
+        sys.puts("graph_args --base 1000")
+        sys.puts("graph_vlabel Documents")
+        sys.puts("graph_category couchdb")
+      }
+
+      dbs.forEach(function(db) {
+        if (mode === 'config') {
+          sys.puts(db + "_doc_count.label " + db)
+          sys.puts(db + "_doc_count.type COUNTER")
+          sys.puts(db + "_doc_count.min 0")
+          sys.puts(db + "_doc_count.max 100000000")
+        } else {
+          conn.database(db).info(function (err, info) {
+            if (err) {
+              sys.puts(db + "_doc_count.value U")
+            } else {
+              sys.puts(db + "_doc_count.value " + (info.doc_count || 0))
+            }
+          })
+        }
+      })
+    }
+  })
+})
 
