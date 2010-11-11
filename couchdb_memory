@@ -37,8 +37,8 @@ exec("free", function(err, data) {
         rss += parseInt(values[5])
       })
 
-      sys.puts("memory_vsize.value " + vsize)
-      sys.puts("memory_rss.value " + rss)
+      sys.puts("memory_vsize.value " + (vsize * 1024))
+      sys.puts("memory_rss.value " + (rss * 1024))
     })
   }
 })
