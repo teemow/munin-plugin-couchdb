@@ -1,117 +1,56 @@
-#!/usr/bin/env perl
-###
-### Munin plugin for CouchDB HTTP request monitoring
-###
+#!/usr/bin/env node
+// Munin plugin for CouchDB database disk sizes
 
-# Parameters:
-#
-# config
-# autoconf
+// Magic Markers for auto-configuration
+// #%# family=auto
+// #%# capabilities=autoconf suggest
 
-#%# family=auto
-#%# capabilities=autoconf
+var cradle = require("cradle")
+  , sys = require("sys")
 
-=head1 NAME
+var conn = new(cradle.Connection)
+  , mode = "fetch"
 
-couchdb_httpd_requests - Munin plugin to monitor the number of requests to
-CouchDB servers.
+// could be "config" or "autoconf" mode
+if (process.argv[2] !== undefined) mode = process.argv[2]
 
-=head1 APPLICABLE SYSTEMS
-
-CouchDB servers with statistics enabled.
-
-=head1 CONFIGURATION
-
-=head2 Environment variables
-
-=over
-
-=item *
-
-B<uri>: Set the URI for access to the _stats endpoint for the target CouchDB
-instance. This defaults to B<http://localhost:5984/_stats?range=300>.
-
-=back
-
-=head1 INTERPRETATION
-
-The plugin shows the total number of requests to the CouchDB server.
-
-=head1 BUGS
-
-Yep.
-
-=head1 AUTHOR
-
-Gordon Stratton <gordon.stratton@gmail.com>
-
-=head1 LICENSE
-
-Beerware
-
-=cut
-
-my $ret = undef;
-
-if (!eval("require LWP::UserAgent;")) {
-	$ret = "LWP::UserAgent not found";
-}
-
-if (!eval("require JSON;")) {
-	$ret = "JSON not found";
-}
-
-my $URI = exists($ENV{'uri'}) ? $ENV{'uri'} : "http://localhost:5984/_stats?range=300";
-
-if (defined($ARGV[0]) && $ARGV[0] eq "autoconf")
-{
-	if ($ret)
-	{
-		print "no ($ret)\n";
-		exit 1;
-	}
-
-	my $response = LWP::UserAgent->new(timeout => 5)->request(HTTP::Request->new('GET', $URI));
-
-	if ($response->is_success) {
-		print "yes\n";
-		exit 0;
-	} else {
-		print "no\n";
-		exit 1;
-	}
-}
-
-if (defined($ARGV[0]) && $ARGV[0] eq "config") {
-	print "graph_title CouchDB httpd requests\n";
-	print "graph_args --base 1000\n";
-	print "graph_vlabel requests / \${graph_period}\n";
-	print "graph_category couchdb\n";
-	print "requests.label requests\n";
-	print "requests.type COUNTER\n";
-	print "requests.min 0\n";
-	print "requests.max 1000000\n";
-	print "bulk_requests.label bulk requests\n";
-	print "bulk_requests.type COUNTER\n";
-	print "bulk_requests.min 0\n";
-	print "bulk_requests.max 1000000\n";
-	print "view_reads.label view reads\n";
-	print "view_reads.type COUNTER\n";
-	print "view_reads.min 0\n";
-	print "view_reads.max 1000000\n";
-	exit 0;
-}
-
-my $response = LWP::UserAgent->new(timeout => 5)->request(HTTP::Request->new('GET', $URI));
-
-if ($response->is_success) {
-	my $json = JSON::decode_json($response->content);
-	print "requests.value $json->{'httpd'}->{'requests'}->{'mean'}\n";
-	print "bulk_requests.value $json->{'httpd'}->{'bulk_requests'}->{'mean'}\n";
-	print "view_reads.value $json->{'httpd'}->{'view_reads'}->{'mean'}\n";
+if (mode === 'config') {
+  sys.puts("graph_title CouchDB httpd requests");
+  sys.puts("graph_args --base 1000");
+  sys.puts("graph_vlabel requests / \${graph_period}");
+  sys.puts("graph_category couchdb");
+  sys.puts("requests.label requests");
+  sys.puts("requests.type COUNTER");
+  sys.puts("requests.min 0");
+  sys.puts("requests.max 1000000");
+  sys.puts("bulk_requests.label bulk requests");
+  sys.puts("bulk_requests.type COUNTER");
+  sys.puts("bulk_requests.min 0");
+  sys.puts("bulk_requests.max 1000000");
+  sys.puts("view_reads.label view reads");
+  sys.puts("view_reads.type COUNTER");
+  sys.puts("view_reads.min 0");
+  sys.puts("view_reads.max 1000000");
 } else {
-	print "requests.value U\n";
-	print "bulk_requests.value U\n";
-	print "view_reads.value U\n";
+  conn.stats(function(err, stats) {
+    if (mode === 'autoconf') {
+      if (!err) {
+        sys.puts("yes")
+      } else {
+        sys.puts("no")
+        process.exit(1)
+      }
+    } else {
+      if (err || typeof stats.httpd.requests === "undefined") {
+        sys.puts("requests.value U");
+        sys.puts("bulk_requests.value U");
+        sys.puts("view_reads.value U");
+      } else {
+        sys.puts("requests.value " + (stats.httpd.requests.mean || 0));
+        sys.puts("bulk_requests.value " + (stats.httpd.bulk_requests.mean || 0));
+        sys.puts("view_reads.value " + (stats.httpd.view_reads.mean || 0));
+      }
+    }
+  });
 }
 

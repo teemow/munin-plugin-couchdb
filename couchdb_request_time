@@ -1,103 +1,43 @@
-#!/usr/bin/env perl
-###
-### Munin plugin for CouchDB HTTP request monitoring
-###
+#!/usr/bin/env node
+// Munin plugin for CouchDB database disk sizes
 
-# Parameters:
-#
-# config
-# autoconf
+// Magic Markers for auto-configuration
+// #%# family=auto
+// #%# capabilities=autoconf suggest
 
-#%# family=auto
-#%# capabilities=autoconf
+var cradle = require("cradle")
+  , sys = require("sys")
 
-=head1 NAME
+var conn = new(cradle.Connection)
+  , mode = "fetch"
 
-couchdb_request_time - Munin plugin to monitor the average request time.
+// could be "config" or "autoconf" mode
+if (process.argv[2] !== undefined) mode = process.argv[2]
 
-=head1 APPLICABLE SYSTEMS
-
-CouchDB servers with statistics enabled.
-
-=head1 CONFIGURATION
-
-=head2 Environment variables
-
-=over
-
-=item *
-
-B<uri>: Set the URI for access to the _stats endpoint for the target CouchDB
-instance. This defaults to B<http://localhost:5984/_stats?range=300>.
-
-=back
-
-=head1 INTERPRETATION
-
-The plugin shows the average time of requests to the CouchDB server.
-
-=head1 BUGS
-
-Yep.
-
-=head1 AUTHOR
-
-Timo Derstappen <teemow@gmail.com>
-
-=head1 LICENSE
-
-Beerware
-
-=cut
-
-my $ret = undef;
-
-if (!eval("require LWP::UserAgent;")) {
-	$ret = "LWP::UserAgent not found";
-}
-
-if (!eval("require JSON;")) {
-	$ret = "JSON not found";
-}
-
-my $URI = exists($ENV{'uri'}) ? $ENV{'uri'} : "http://localhost:5984/_stats?range=300";
-
-if (defined($ARGV[0]) && $ARGV[0] eq "autoconf")
-{
-	if ($ret)
-	{
-		print "no ($ret)\n";
-		exit 1;
-	}
-
-	my $response = LWP::UserAgent->new(timeout => 5)->request(HTTP::Request->new('GET', $URI));
-
-	if ($response->is_success) {
-		print "yes\n";
-		exit 0;
-	} else {
-		print "no\n";
-		exit 1;
-	}
-}
-
-if (defined($ARGV[0]) && $ARGV[0] eq "config") {
-	print "graph_title CouchDB httpd request times\n";
-	print "graph_vlabel request time in ms\n";
-	print "graph_category couchdb\n";
-	print "request_time.label request time\n";
-	print "request_time.type COUNTER\n";
-	print "request_time.min 0\n";
-	print "request_time.max 1000000\n";
-	exit 0;
-}
-
-my $response = LWP::UserAgent->new(timeout => 5)->request(HTTP::Request->new('GET', $URI));
-
-if ($response->is_success) {
-	my $json = JSON::decode_json($response->content);
-	print "request_time.value $json->{'couchdb'}->{'request_time'}->{'mean'}\n";
+if (mode === 'config') {
+  sys.puts("graph_title CouchDB httpd request times");
+  sys.puts("graph_vlabel request time in ms");
+  sys.puts("graph_category couchdb");
+  sys.puts("request_time.label request time");
+  sys.puts("request_time.type COUNTER");
+  sys.puts("request_time.min 0");
+  sys.puts("request_time.max 1000");
 } else {
-	print "request_time.value U\n";
+  conn.stats(function(err, stats) {
+    if (mode === 'autoconf') {
+      if (!err) {
+        sys.puts("yes")
+      } else {
+        sys.puts("no")
+        process.exit(1)
+      }
+    } else {
+      if (err || typeof stats.couchdb.request_time === "undefined") {
+        sys.puts("request_time.value U");
+      } else {
+        sys.puts("request_time.value " + (stats.couchdb.request_time.mean || 0));
+      }
+    }
+  });
 }
 

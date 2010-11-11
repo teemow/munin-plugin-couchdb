@@ -1,129 +1,51 @@
-#!/usr/bin/env perl
-###
-### Munin plugin for CouchDB HTTP request method monitoring
-###
+#!/usr/bin/env node
+// Munin plugin for CouchDB database disk sizes
 
-# Parameters:
-#
-# config
-# autoconf
+// Magic Markers for auto-configuration
+// #%# family=auto
+// #%# capabilities=autoconf suggest
 
-#%# family=auto
-#%# capabilities=autoconf
+var cradle = require("cradle")
+  , sys = require("sys")
 
-=head1 NAME
+var conn = new(cradle.Connection)
+  , mode = "fetch"
+  , verbs = ['GET', 'PUT', 'POST', 'DELETE', 'COPY', 'HEAD', 'MOVE'];
 
-couchdb_httpd_request_methods - Munin plugin to monitor the breakdown of HTTP
-requests to CouchDB servers.
+// could be "config" or "autoconf" mode
+if (process.argv[2] !== undefined) mode = process.argv[2]
 
-=head1 APPLICABLE SYSTEMS
+if (mode === 'config') {
+  sys.puts("graph_title CouchDB httpd request methods");
+  sys.puts("graph_args --base 1000");
+  sys.puts("graph_vlabel requests / \${graph_period}");
+  sys.puts("graph_category couchdb");
 
-CouchDB servers with statistics enabled.
-
-=head1 CONFIGURATION
-
-=head2 Environment variables
-
-=over
-
-=item *
-
-B<uri>: Set the URI for access to the _stats endpoint for the target CouchDB
-instance. This defaults to B<http://localhost:5984/_stats?range=300>.
-
-=back
-
-=head1 INTERPRETATION
-
-The plugin shows the breakdown of HTTP requests to the CouchDB server by HTTP
-verb.
-
-=head1 BUGS
-
-Yep.
-
-=head1 AUTHOR
-
-Gordon Stratton <gordon.stratton@gmail.com>
-
-=head1 LICENSE
-
-Beerware
-
-=cut
-
-my $ret = undef;
-
-if (!eval("require LWP::UserAgent;")) {
-	$ret = "LWP::UserAgent not found";
-}
-
-if (!eval("require JSON;")) {
-	$ret = "JSON not found";
-}
-
-my $URI = exists($ENV{'uri'}) ? $ENV{'uri'} : "http://localhost:5984/_stats?range=300";
-my @HTTP_VERBS = ('get', 'put', 'post', 'delete', 'copy', 'head', 'move');
-
-if (@HTTP_VERBS < 1) {
-	$ret = "No HTTP verbs specified";
-}
-
-if (defined($ARGV[0]) && $ARGV[0] eq "autoconf")
-{
-	if ($ret)
-	{
-		print "no ($ret)\n";
-		exit 1;
-	}
-
-	my $response = LWP::UserAgent->new(timeout => 5)->request(HTTP::Request->new('GET', $URI));
-
-	if ($response->is_success) {
-		print "yes\n";
-		exit 0;
-	} else {
-		print "no\n";
-		exit 1;
-	}
-}
-
-if (defined($ARGV[0]) && $ARGV[0] eq "config") {
-	print "graph_title CouchDB httpd request methods\n";
-	print "graph_args --base 1000\n";
-	print "graph_vlabel requests / \${graph_period}\n";
-	print "graph_category couchdb\n";
-	print "$HTTP_VERBS[0].label HTTP " . uc($HTTP_VERBS[0]) . "\n";
-	print "$HTTP_VERBS[0].type COUNTER\n";
-	print "$HTTP_VERBS[0].min 0\n";
-	print "$HTTP_VERBS[0].max 1000000\n";
-	print "$HTTP_VERBS[0].draw AREA\n";
-	foreach (@HTTP_VERBS[1..scalar(@HTTP_VERBS) - 1]) {
-		print "$_.label HTTP " . uc($_) . "\n";
-		print "$_.type COUNTER\n";
-		print "$_.min 0\n";
-		print "$_.max 1000000\n";
-		print "$_.draw STACK\n";
-	}
-	exit 0;
-}
-
-
-my $response = LWP::UserAgent->new(timeout => 5)->request(HTTP::Request->new('GET', $URI));
-
-if ($response->is_success) {
-	my $json = JSON::decode_json($response->content);
-	foreach (@HTTP_VERBS) {
-		if (defined($json->{'httpd_request_methods'}->{uc($_)})) {
-			$ucmethod = uc($_);
-			print "$_.value $json->{'httpd_request_methods'}->{$ucmethod}->{'mean'}\n";
-		} else {
-			print "$_.value U\n";
-		}
-	}
+  verbs.forEach(function(verb, idx) {
+    sys.puts(verb + ".label HTTP " + verb);
+    sys.puts(verb + ".type COUNTER");
+    sys.puts(verb + ".min 0");
+    sys.puts(verb + ".max 1000000");
+    sys.puts(verb + ".draw " (idx ? "STACK" : "AREA"));
+  })
 } else {
-	foreach (@HTTP_VERBS) {
-		print "$_.value U\n";
-	}
+  conn.stats(function(err, stats) {
+    if (mode === 'autoconf') {
+      if (!err) {
+        sys.puts("yes")
+      } else {
+        sys.puts("no")
+        process.exit(1)
+      }
+    } else {
+      verbs.forEach(function(verb) {
+        if (err || typeof stats.httpd_request_methods[verb] === "undefined") {
+          sys.puts(verb + ".value U")
+        } else {
+          sys.puts(verb + ".value " + (stats.httpd_request_methods[verb].mean || 0))
+        }
+      })
+    }
+  });
 }
 

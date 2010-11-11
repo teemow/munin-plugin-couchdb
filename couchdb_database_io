@@ -1,112 +1,52 @@
-#!/usr/bin/env perl
-###
-### Munin plugin for CouchDB database I/O monitoring
-###
+#!/usr/bin/env node
+// Munin plugin for CouchDB database disk sizes
 
-# Parameters:
-#
-# config
-# autoconf
+// Magic Markers for auto-configuration
+// #%# family=auto
+// #%# capabilities=autoconf suggest
 
-#%# family=auto
-#%# capabilities=autoconf
+var cradle = require("cradle")
+  , sys = require("sys")
 
-=head1 NAME
+var conn = new(cradle.Connection)
+  , mode = "fetch"
 
-couchdb_database_io - Munin plugin to monitor CouchDB database I/O
+// could be "config" or "autoconf" mode
+if (process.argv[2] !== undefined) mode = process.argv[2]
 
-=head1 APPLICABLE SYSTEMS
-
-CouchDB servers with statistics enabled.
-
-=head1 CONFIGURATION
-
-=head2 Environment variables
-
-=over
-
-=item *
-
-B<uri>: Set the URI for access to the _stats endpoint for the target CouchDB
-instance. This defaults to B<http://localhost:5984/_stats?range=300>.
-
-=back
-
-=head1 INTERPRETATION
-
-The plugin shows the internal count of database reads as well as writes.
-
-=head1 BUGS
-
-Yep.
-
-=head1 AUTHOR
-
-Gordon Stratton <gordon.stratton@gmail.com>
-
-=head1 LICENSE
-
-Beerware
-
-=cut
-
-my $ret = undef;
-
-if (!eval("require LWP::UserAgent;")) {
-	$ret = "LWP::UserAgent not found";
-}
-
-if (!eval("require JSON;")) {
-	$ret = "JSON not found";
-}
-
-my $URI = exists($ENV{'uri'}) ? $ENV{'uri'} : "http://localhost:5984/_stats?range=300";
-
-if (defined($ARGV[0]) && $ARGV[0] eq "autoconf")
-{
-	if ($ret)
-	{
-		print "no ($ret)\n";
-		exit 1;
-	}
-
-	my $response = LWP::UserAgent->new(timeout => 5)->request(HTTP::Request->new('GET', $URI));
-
-	if ($response->is_success) {
-		print "yes\n";
-		exit 0;
-	} else {
-		print "no\n";
-		exit 1;
-	}
-}
-
-if (defined($ARGV[0]) && $ARGV[0] eq "config") {
-	print "graph_title CouchDB database I/O statistics\n";
-	print "graph_args --base 1000\n";
-	print "graph_vlabel number of reads (-) and writes (+) / \${graph_period}\n";
-	print "graph_category couchdb\n";
-	print "reads.label reads\n";
-	print "reads.graph no\n";
-	print "reads.type COUNTER\n";
-	print "reads.min 0\n";
-	print "reads.max 1000000\n";
-	print "writes.label reads/writes\n";
-	print "writes.type COUNTER\n";
-	print "writes.min 0\n";
-	print "writes.max 1000000\n";
-	print "writes.negative reads\n";
-	exit 0;
-}
-
-my $response = LWP::UserAgent->new(timeout => 5)->request(HTTP::Request->new('GET', $URI));
-
-if ($response->is_success) {
-	my $json = JSON::decode_json($response->content);
-	print "reads.value $json->{'couchdb'}->{'database_reads'}->{'mean'}\n";
-	print "writes.value $json->{'couchdb'}->{'database_writes'}->{'mean'}\n";
+if (mode === 'config') {
+  sys.puts("graph_title CouchDB database I/O statistics");
+  sys.puts("graph_args --base 1000");
+  sys.puts("graph_vlabel number of reads (-) and writes (+) / \${graph_period}");
+  sys.puts("graph_category couchdb");
+  sys.puts("reads.label reads");
+  sys.puts("reads.graph no");
+  sys.puts("reads.type COUNTER");
+  sys.puts("reads.min 0");
+  sys.puts("reads.max 1000000");
+  sys.puts("writes.label reads/writes");
+  sys.puts("writes.type COUNTER");
+  sys.puts("writes.min 0");
+  sys.puts("writes.max 1000000");
+  sys.puts("writes.negative reads");
 } else {
-	print "reads.value U\n";
-	print "writes.value U\n";
+  conn.stats(function(err, stats) {
+    if (mode === 'autoconf') {
+      if (!err) {
+        sys.puts("yes")
+      } else {
+        sys.puts("no")
+        process.exit(1)
+      }
+    } else {
+      if (err) {
+        sys.puts("reads.value U")
+        sys.puts("writes.value U")
+      } else {
+        sys.puts("reads.value " + (stats.couchdb.database_reads.mean || 0))
+        sys.puts("writes.value " + (stats.couchdb.database_writes.mean || 0))
+      }
+    }
+  });
 }
 

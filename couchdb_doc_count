@@ -5,59 +5,49 @@
 // #%# family=auto
 // #%# capabilities=autoconf suggest
 
-var http = require("http")
+var cradle = require("cradle")
   , sys = require("sys")
 
-var client = http.createClient(5984, "localhost")
-var req = client.request('GET', '/_all_dbs')
+var conn = new(cradle.Connection)
+  , mode = "fetch"
 
-req.on('response', function(res) {
-    if (process.argv[2] !== undefined && process.argv[2] == 'autoconf') {
-        if (res.statusCode === 200) {
-            sys.puts("yes")
-        } else {
-            sys.puts("no")
-            process.exit(1)
-        }
+// could be "config" or "autoconf" mode
+if (process.argv[2] !== undefined) mode = process.argv[2]
+
+conn.databases(function(err, dbs) {
+  if (mode === 'autoconf') {
+    if (!err) {
+      sys.puts("yes")
     } else {
-        var body = ''
-        res.on('data', function(chunk) {
-            body += chunk
-        })
-        res.on('end', function() {
-            var dbs = JSON.parse(body)
-
-            if (process.argv[2] !== undefined && process.argv[2] == 'config') {
-                sys.puts("graph_title CouchDB db doc count");
-                sys.puts("graph_args --base 1000");
-                sys.puts("graph_vlabel Documents");
-                sys.puts("graph_category couchdb");
-            }
-
-            dbs.forEach(function(db) {
-                if (process.argv[2] !== undefined && process.argv[2] == 'config') {
-                    sys.puts(db + "_doc_count.label " + db);
-                    sys.puts(db + "_doc_count.type COUNTER");
-                    sys.puts(db + "_doc_count.min 0");
-                    sys.puts(db + "_doc_count.max 100000000");
-                } else {
-                    var db_req = client.request('GET', '/' + db)
-                    db_req.on('response', function(res) {
-                        var body = ''
-                        res.on('data', function(chunk) {
-                            body += chunk
-                        })
-                        res.on('end', function() {
-                            var stat = JSON.parse(body)
-                            sys.puts(db + "_doc_count.value " + stat.doc_count)
-                        })
-                    })
-                    db_req.end()
-                }
-            })
-        })
+      sys.puts("no")
+      process.exit(1)
     }
-})
+  } else {
+    if (err) throw err
 
-req.end()
+    if (mode === 'config') {
+      sys.puts("graph_title CouchDB db doc count");
+      sys.puts("graph_args --base 1000");
+      sys.puts("graph_vlabel Documents");
+      sys.puts("graph_category couchdb");
+    }
+
+    dbs.forEach(function(db) {
+      if (mode === 'config') {
+        sys.puts(db + "_doc_count.label " + db);
+        sys.puts(db + "_doc_count.type COUNTER");
+        sys.puts(db + "_doc_count.min 0");
+        sys.puts(db + "_doc_count.max 100000000");
+      } else {
+        conn.database(db).info(function (err, info) {
+          if (err) {
+            sys.puts(db + "_doc_count.value U")
+          } else {
+            sys.puts(db + "_doc_count.value " + (info.doc_count || 0))
+          }
+        })
+      }
+    })
+  }
+});
 
