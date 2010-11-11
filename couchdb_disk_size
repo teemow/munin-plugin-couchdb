@@ -37,12 +37,10 @@ fs.realpath(__filename, function(err, realpath) {
         sys.puts("graph_category couchdb")
       }
 
-      dbs.forEach(function(db) {
+      dbs.forEach(function(db, idx) {
         if (mode === 'config') {
           sys.puts(db + "_disk_size.label " + db)
-          sys.puts(db + "_disk_size.type COUNTER")
-          sys.puts(db + "_disk_size.min 0")
-          sys.puts(db + "_disk_size.max 1000000")
+          sys.puts(db + "._disk_size.draw " (idx ? "STACK" : "AREA"))
         } else {
           conn.database(db).info(function (err, info) {
             if (err) {
