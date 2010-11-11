@@ -82,7 +82,7 @@ if (defined($ARGV[0]) && $ARGV[0] eq "autoconf")
 }
 
 if (defined($ARGV[0]) && $ARGV[0] eq "config") {
-	print "graph_title CouchDB httpd requests\n";
+	print "graph_title CouchDB httpd request times\n";
 	print "graph_vlabel request time in ms\n";
 	print "graph_category couchdb\n";
 	print "request_time.label request time\n";

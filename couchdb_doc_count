@@ -1,6 +1,10 @@
 #!/usr/bin/env node
 // Munin plugin for CouchDB database disk sizes
 
+// Magic Markers for auto-configuration
+// #%# family=auto
+// #%# capabilities=autoconf suggest
+
 var http = require("http")
   , sys = require("sys")
 
