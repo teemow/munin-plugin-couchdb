@@ -32,7 +32,7 @@ fs.realpath(__filename, function(err, realpath) {
 
       if (mode === 'config') {
         sys.puts("graph_title CouchDB db disk sizes")
-        sys.puts("graph_args --base 1048576")
+        sys.puts("graph_args --base 1024")
         sys.puts("graph_vlabel Disk sizes in Megabytes")
         sys.puts("graph_category couchdb")
       }
