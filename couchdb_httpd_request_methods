@@ -31,7 +31,7 @@ fs.realpath(__filename, function(err, realpath) {
       sys.puts(verb + ".type COUNTER")
       sys.puts(verb + ".min 0")
       sys.puts(verb + ".max 1000000")
-      sys.puts(verb + ".draw " (idx ? "STACK" : "AREA"))
+      sys.puts(verb + ".draw " + (idx ? "STACK" : "AREA"))
     })
   } else {
     conn.stats(function(err, stats) {

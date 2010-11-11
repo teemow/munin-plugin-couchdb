@@ -40,7 +40,7 @@ fs.realpath(__filename, function(err, realpath) {
       dbs.forEach(function(db, idx) {
         if (mode === 'config') {
           sys.puts(db + "_doc_count.label " + db)
-          sys.puts(db + "._doc_count.draw " (idx ? "STACK" : "AREA"))
+          sys.puts(db + "._doc_count.draw " + (idx ? "STACK" : "AREA"))
         } else {
           conn.database(db).info(function (err, info) {
             if (err) {
