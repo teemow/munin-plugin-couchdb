@@ -21,7 +21,10 @@ exec("cat /proc/stat |egrep '^cpu[0-9]+'|wc -l", function(err, ncpu) {
   if (mode === 'config') {
     sys.puts("graph_title CouchDB CPU usage")
     sys.puts("graph_args --base 1000 -r --lower-limit 0 --upper-limit " + limit)
+    sys.puts("graph_vlabel %")
+    sys.puts("graph_period second")
     sys.puts("graph_category couchdb")
+    sys.puts("graph_scale no")
     sys.puts("cpu.label cpu")
     sys.puts('cpu.draw AREA')
     sys.puts("cpu.max " + maximum)
@@ -29,17 +32,15 @@ exec("cat /proc/stat |egrep '^cpu[0-9]+'|wc -l", function(err, ncpu) {
     sys.puts('cpu.type DERIVE')
   } else {
     var cpu = 0
-    exec("ps -U couchdb -u couchdb u", function(err, data) {
+    exec("top -b -n 1 | grep couchdb", function(err, data) {
       data = data.split("\n")
-      data.shift()
       data.pop()
-
       data.forEach(function(line) {
         var values = line.split(/\s+/)
-        cpu += parseFloat(values[2])
+        cpu += parseFloat(values[9])
       })
 
-      sys.puts("cpu.value " + cpu)
+      sys.puts("cpu.value " + (cpu * 100000))
     })
   }
 })
