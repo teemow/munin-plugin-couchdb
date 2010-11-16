@@ -40,7 +40,7 @@ exec("cat /proc/stat |egrep '^cpu[0-9]+'|wc -l", function(err, ncpu) {
         cpu += parseFloat(values[8])
       })
 
-      sys.puts("cpu.value " + (cpu * 100000))
+      sys.puts("cpu.value " + (cpu * 1000))
     })
   }
 })
